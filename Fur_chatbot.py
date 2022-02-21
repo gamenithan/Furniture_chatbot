@@ -40,6 +40,7 @@ def MainFunction():
 
     #รับ intent จาก Dailogflow
     question_from_dailogflow_raw = request.get_json(silent=True, force=True)
+    print(question_from_dailogflow_raw["queryResult"]["outputContexts"])
 
     #เรียกใช้ฟังก์ชัน generate_answer เพื่อแยกส่วนของคำถาม
     answer_from_bot = generating_answer(question_from_dailogflow_raw)
@@ -60,9 +61,9 @@ def generating_answer(question_from_dailogflow_dict):
 
     #ลูปตัวเลือกของฟังก์ชั่นสำหรับตอบคำถามกลับ
     if intent_group_question_str == 'คำนวนข้อมูลสินค้า':
-        answer_str = menu_recormentation(question_from_dailogflow_dict)
-    elif intent_group_question_str == 'คำนวนน้ำหนัก': 
-        answer_str = BMI(question_from_dailogflow_dict)
+        answer_str = question_Furniture_data(question_from_dailogflow_dict)
+    elif intent_group_question_str == 'คำนวนสินค้าในสต็อก': 
+        answer_str = check_stock(question_from_dailogflow_dict)
     else: answer_str = "ผมไม่เข้าใจ คุณต้องการอะไร"
 
     #สร้างการแสดงของ dict 
@@ -73,7 +74,7 @@ def generating_answer(question_from_dailogflow_dict):
     
     return answer_from_bot
 
-def menu_recormentation(respond_dict): #ฟังก์ชั่นสำหรับเมนูแนะนำ
+def question_Furniture_data(respond_dict): #ฟังก์ชั่นสำหรับเมนูแนะนำ
     fur = str(respond_dict["queryResult"]["outputContexts"][1]["parameters"]["Fur.original"])
     # database_ref = firestore.client().document('Furniture/Item_list')
     # database_dict = database_ref.get().to_dict()
@@ -102,26 +103,24 @@ def menu_recormentation(respond_dict): #ฟังก์ชั่นสำหร�
     # answer_function = Item_name
     return answer_function
 
-def BMI(respond_dict): #ฟังก์ชั่นสำหรับคำนวนน้ำหนัก
-
-    #เก็บค่าของ Weight กับ Height
-    weight1 = float(respond_dict["queryResult"]["outputContexts"][1]["parameters"]["Weight.original"])
-    height1 = float(respond_dict["queryResult"]["outputContexts"][1]["parameters"]["Height.original"])
+def check_stock(respond_dict): #ฟังก์ชั่นสำหรับคำนวนน้ำหนัก
+    # print(respond_dict)
+    fur = str(respond_dict["queryResult"]["outputContexts"][0]["parameters"]["Fur.original"])
+    cell=sheet.col_values(3)
+    num = 1
+    for i in cell:
+        if str(i) == str(fur):
+            Item_name = sheet.cell(num, 16).value
+            answer_function = "จำนวนสินค้ามีทั้งหมด" + Item_name + "ชิ้น"
+            break
+        elif i == None:
+            # Item_name = sheet.cell(3,15).value
+            answer_function = "ไม่มีข้อมูล"
+        else:
+            num += 1
+            answer_function = "ไม่มีข้อมูล"
     #เพิ่มเติม
     # sheet.insert_row([weight1, height1], 2)
-    
-    #คำนวนน้ำหนัก
-    BMI = weight1/(height1/100)**2
-    if BMI < 18.5 :
-        answer_function = "ผอมจัง"
-    elif 18.5 <= BMI < 23.0:
-        answer_function = "สมส่วน"
-    elif 23.0 <= BMI < 25.0:
-        answer_function = "ค่อนข้างอ้วน"
-    elif 25.0 <= BMI < 30:
-        answer_function = "อ้วนล่ะนะ"
-    else :
-        answer_function = "อ้วนมากจ้าา"
     return answer_function
 
 #Flask
