@@ -74,27 +74,34 @@ def generating_answer(question_from_dailogflow_dict):
     print("--------------")
     #เก็บต่า ชื่อของ intent ที่รับมาจาก Dailogflow
     intent_group_question_str = question_from_dailogflow_dict["queryResult"]["intent"]["displayName"]
-
+    num = 0
     #ลูปตัวเลือกของฟังก์ชั่นสำหรับตอบคำถามกลับ
     if intent_group_question_str == 'คำนวนข้อมูลสินค้า':
         answer_str = question_Furniture_data(question_from_dailogflow_dict)
     elif intent_group_question_str == 'คำนวนสินค้าในสต็อก': 
-        answer_str = check_stock()
+        answer_str = check_stock(question_from_dailogflow_dict)
     elif intent_group_question_str == 'ราคาสินค้า':
         answer_str = check_price()
     elif intent_group_question_str == 'ดีไซเนอร์': 
         answer_str = check_designer()
-    elif intent_group_question_str == 'รูป': 
+    elif intent_group_question_str == 'ขอดูรูป':
+        num = 1
+        answer_str = check_img()
+    elif intent_group_question_str == 'รูป':
+        num = 1
         answer_str = test_img(question_from_dailogflow_dict)
     else: answer_str = "ผมไม่เข้าใจ คุณต้องการอะไร"
 
     #สร้างการแสดงของ dict 
-    answer_from_bot = {"fulfillmentText": answer_str}
-    # answer_from_bot = {"fulfillmentText": {"line": {"previewImageUrl": "https://www.ikea-club.org/images/productcatalog/gallery/S69276421/1.jpg", "originalContentUrl": "https://www.ikea-club.org/images/productcatalog/gallery/S69276421/1.jpg", "type": "image"}}}
+    # answer_from_bot = {"fulfillmentMessages": [{"platform": "LINE","image": {"imageUri": "https://www.ikea-club.org/images/productcatalog/gallery/S69276421/1.jpg"}}]}
+    if num == 1:
+        answer_from_bot = {"fulfillmentMessages": answer_str}
+    else:
+        answer_from_bot = {"fulfillmentText": answer_str}
     # answer_from_bot = {"line": {"previewImageUrl": "https://www.ikea-club.org/images/productcatalog/gallery/S69276421/1.jpg", "originalContentUrl": "https://www.ikea-club.org/images/productcatalog/gallery/S69276421/1.jpg", "type": "image"}}
     
     #แปลงจาก dict ให้เป็น JSON
-    answer_from_bot = json.dumps(answer_from_bot, indent=4) 
+    # answer_from_bot = json.dumps(answer_from_bot, indent=4)
     
     return answer_from_bot
 
@@ -129,8 +136,8 @@ def question_Furniture_data(respond_dict):
             answer_function = "ไม่มีข้อมูล"
     return answer_function
 
-def check_stock(): 
-    fur = sheet1.cell(2, 3).value
+def check_stock(respond_dict): 
+    fur = respond_dict["queryResult"]["outputContexts"][1]["parameters"]["fur.original"]
     cell=sheet2.col_values(3)
     num = 1
     for i in cell:
@@ -143,7 +150,6 @@ def check_stock():
         else:
             num += 1
             answer_function = "ไม่มีข้อมูล"
-    #เพิ่มเติม
     return answer_function
 
 def check_price():
@@ -161,8 +167,6 @@ def check_price():
         else:
             num += 1
             answer_function = "ไม่มีข้อมูล"
-    #เพิ่มเติม
-    # sheet.insert_row([weight1, height1], 2)
     return answer_function
 
 def check_designer():
@@ -182,10 +186,28 @@ def check_designer():
             answer_function = "ไม่มีข้อมูล"
     return answer_function
 
-def test_img(respond_dict): 
-    img = {"line": {"previewImageUrl": "https://www.ikea-club.org/images/productcatalog/gallery/S69276421/1.jpg", "originalContentUrl": "https://www.ikea-club.org/images/productcatalog/gallery/S69276421/1.jpg", "type": "image"}}
-    answer_function = json.dumps(img)
+def check_img():
+    fur = sheet1.cell(2, 3).value
+    cell=sheet2.col_values(3)
+    num = 1
+    for i in cell:
+        if str(i) == str(fur):
+            Item_name = sheet2.cell(num, 15).value
+            answer_function = [{"platform": "LINE","image": {"imageUri": Item_name}}]
+            break
+        elif i == None:
+            # Item_name = sheet.cell(3,15).value
+            answer_function = "ไม่มีข้อมูล"
+        else:
+            num += 1
+            answer_function = "ไม่มีข้อมูล"
     return answer_function
+
+def test_img(respond_dict): 
+    img = [{"platform": "LINE","image": {"imageUri": "https://www.ikea-club.org/images/productcatalog/gallery/S69276421/1.jpg"}}]
+    # answer_function = json.dumps(img, indent=4)
+    
+    return img
 
 #Flask
 if __name__ == '__main__':
