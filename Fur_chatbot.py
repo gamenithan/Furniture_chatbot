@@ -22,7 +22,7 @@ scope = ["https://spreadsheets.google.com/feeds",'https://www.googleapis.com/aut
 cerds = ServiceAccountCredentials.from_json_keyfile_name("cerds.json", scope)
 client = gspread.authorize(cerds)
 sheet1 = client.open("Chatbot-Fur").worksheet('sheet1')
-sheet2 = client.open("Chatbot-Fur").worksheet('sheet2') # เป็นการเปิดไปยังหน้าชีตนั้นๆ
+sheet2 = client.open("Chatbot-Fur").worksheet('Inventory') # เป็นการเปิดไปยังหน้าชีตนั้นๆ
 # pprint(data)
 #-------------------------------------
 
@@ -45,15 +45,6 @@ def MainFunction():
     question_from_dailogflow_raw = request.get_json(silent=True, force=True)
     # print(json.dumps(question_from_dailogflow_raw, indent=4 ,ensure_ascii=False))
     print(type(question_from_dailogflow_raw))
-    # userid = question_from_dailogflow_raw["originalDetectIntentRequest"]["payload"]["data"]["source"]["userId"]
-    # cell_name = sheet1.col_values(1)
-    # num = 1
-    # for i in cell_name:
-    #     if i == userid:
-    #         num = 0
-    #         break
-    # if num == 1:
-    #     sheet1.insert_row([userid], 2)
     #เรียกใช้ฟังก์ชัน generate_answer เพื่อแยกส่วนของคำถาม
     answer_from_bot = generating_answer(question_from_dailogflow_raw)
     
@@ -82,8 +73,6 @@ def generating_answer(question_from_dailogflow_dict):
         answer_str = check_stock(question_from_dailogflow_dict)
     elif intent_group_question_str == 'ราคาสินค้า':
         answer_str = check_price()
-    elif intent_group_question_str == 'ดีไซเนอร์': 
-        answer_str = check_designer()
     elif intent_group_question_str == 'ขอดูรูป':
         num = 1
         answer_str = check_img()
@@ -116,16 +105,18 @@ def question_Furniture_data(respond_dict):
     # database_list = list(database_dict.values())
     # ran_menu = randint(0, len(database_list)-1)
     # menu_name = database_list[ran_menu]
-    cell=sheet2.col_values(3)
+    cell=sheet2.col_values(4)
     num = 1
     # sheet.insert_row([fur], 2)
     for i in cell:
-        if str(i) == str(fur):
-            Item_name = sheet2.cell(num, 10).value
-            Item_price = sheet2.cell(num, 5).value
-            Item_designer = sheet2.cell(num, 11).value
-            Item_stock = sheet2.cell(num, 16).value
-            answer_function = "สินค้าชื่อ: " + fur + "\n" + "รายละเอียดสินค้า: " + Item_name + "\n" + "ราคาสินค้า: " + Item_price + " บาท\n" + "ดีไซเนอร์ชื่อ: " + Item_designer + "\n" + "สินค้าคงเหลือ: " + Item_stock + \
+        dict_name = i.split()
+        if str(fur) in dict_name:
+            Item_name = sheet2.cell(num, 2).value
+            Item_type = sheet2.cell(num, 5).value
+            Item_price = sheet2.cell(num, 8).value
+            Item_des = sheet2.cell(num, 7).value
+            Item_stock = sheet2.cell(num, 11).value
+            answer_function = "สินค้าชื่อ: " + Item_name + "\n" + "รายละเอียดสินค้า: " + Item_type + Item_des + "\n" + "ราคาสินค้า: " + Item_price + " บาท\n" +  "สินค้าคงเหลือ: " + Item_stock + \
                 " ชิ้น"
             sheet1.insert_row([userid, timestamp2.strftime("%Y-%m-%d %H:%M:%S"), fur], 2)
             break
@@ -138,11 +129,12 @@ def question_Furniture_data(respond_dict):
 
 def check_stock(respond_dict): 
     fur = respond_dict["queryResult"]["outputContexts"][1]["parameters"]["fur.original"]
-    cell=sheet2.col_values(3)
+    cell=sheet2.col_values(4)
     num = 1
     for i in cell:
-        if str(i) == str(fur):
-            Item_name = sheet2.cell(num, 16).value
+        dict_name = i.split()
+        if str(fur) in dict_name:
+            Item_name = sheet2.cell(num, 11).value
             answer_function = "จำนวนสินค้ามีทั้งหมด" + ' ' + Item_name + ' ' + "ชิ้น"
             break
         elif i == None:
@@ -154,11 +146,12 @@ def check_stock(respond_dict):
 
 def check_price():
     fur = sheet1.cell(2, 3).value
-    cell=sheet2.col_values(3)
+    cell=sheet2.col_values(4)
     num = 1
     for i in cell:
-        if str(i) == str(fur):
-            Item_name = sheet2.cell(num, 5).value
+        dict_name = i.split()
+        if str(fur) in dict_name:
+            Item_name = sheet2.cell(num, 8).value
             answer_function = "ราคา"+ ' ' + Item_name + ' ' + "บาท"
             break
         elif i == None:
@@ -169,22 +162,6 @@ def check_price():
             answer_function = "ไม่มีข้อมูล"
     return answer_function
 
-def check_designer():
-    fur = sheet1.cell(2, 3).value
-    cell=sheet2.col_values(3)
-    num = 1
-    for i in cell:
-        if str(i) == str(fur):
-            Item_name = sheet2.cell(num, 11).value
-            answer_function = "ดีไซเนอร์ชื่อ"+ ' ' + Item_name
-            break
-        elif i == None:
-            # Item_name = sheet.cell(3,15).value
-            answer_function = "ไม่มีข้อมูล"
-        else:
-            num += 1
-            answer_function = "ไม่มีข้อมูล"
-    return answer_function
 
 def check_img():
     fur = sheet1.cell(2, 3).value
