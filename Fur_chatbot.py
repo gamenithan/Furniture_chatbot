@@ -18,11 +18,19 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from pprint import pprint
 
+import pandas as pd
+import numpy as np
+from mlxtend.frequent_patterns import apriori, association_rules
+from mlxtend.preprocessing import TransactionEncoder
+
+from linebot import LineBotApi
+from linebot.exceptions import LineBotApiError
 scope = ["https://spreadsheets.google.com/feeds",'https://www.googleapis.com/auth/spreadsheets',"https://www.googleapis.com/auth/drive.file","https://www.googleapis.com/auth/drive"]
 cerds = ServiceAccountCredentials.from_json_keyfile_name("cerds.json", scope)
 client = gspread.authorize(cerds)
 sheet1 = client.open("Chatbot-Fur").worksheet('sheet1')
-sheet2 = client.open("Chatbot-Fur").worksheet('Inventory') # เป็นการเปิดไปยังหน้าชีตนั้นๆ
+sheet2 = client.open("Chatbot-Fur").worksheet('Inventory')
+order_sheet = client.open("Chatbot-Fur").worksheet('order') # เป็นการเปิดไปยังหน้าชีตนั้นๆ
 # pprint(data)
 #-------------------------------------
 
@@ -73,6 +81,8 @@ def generating_answer(question_from_dailogflow_dict):
         answer_str = check_stock(question_from_dailogflow_dict)
     elif intent_group_question_str == 'ราคาสินค้า':
         answer_str = check_price()
+    elif intent_group_question_str == 'แนะนำสินค้า':
+        answer_str = recommend_item(question_from_dailogflow_dict)
     elif intent_group_question_str == 'ขอดูรูป':
         num = 1
         answer_str = check_img()
@@ -95,7 +105,7 @@ def generating_answer(question_from_dailogflow_dict):
     return answer_from_bot
 
 def question_Furniture_data(respond_dict):
-    fur = respond_dict["queryResult"]["outputContexts"][1]["parameters"]["Fur.original"]
+    fur = respond_dict["queryResult"]["outputContexts"][1]["parameters"]["Fur.original"].upper()
     userid = respond_dict["originalDetectIntentRequest"]["payload"]["data"]["source"]["userId"]
     timestamp = respond_dict["originalDetectIntentRequest"]["payload"]["data"]["timestamp"]
     print(int(timestamp))
@@ -113,9 +123,9 @@ def question_Furniture_data(respond_dict):
         if str(fur) in dict_name:
             Item_name = sheet2.cell(num, 2).value
             Item_type = sheet2.cell(num, 5).value
-            Item_price = sheet2.cell(num, 8).value
-            Item_des = sheet2.cell(num, 7).value
-            Item_stock = sheet2.cell(num, 11).value
+            Item_price = sheet2.cell(num, 9).value
+            Item_des = sheet2.cell(num, 8).value
+            Item_stock = sheet2.cell(num, 12).value
             answer_function = "สินค้าชื่อ: " + Item_name + "\n" + "รายละเอียดสินค้า: " + Item_type + Item_des + "\n" + "ราคาสินค้า: " + Item_price + " บาท\n" +  "สินค้าคงเหลือ: " + Item_stock + \
                 " ชิ้น"
             sheet1.insert_row([userid, timestamp2.strftime("%Y-%m-%d %H:%M:%S"), fur], 2)
@@ -128,7 +138,7 @@ def question_Furniture_data(respond_dict):
     return answer_function
 
 def check_stock(respond_dict): 
-    fur = respond_dict["queryResult"]["outputContexts"][1]["parameters"]["fur.original"]
+    fur = respond_dict["queryResult"]["outputContexts"][1]["parameters"]["fur.original"].upper()
     cell=sheet2.col_values(4)
     num = 1
     for i in cell:
@@ -145,7 +155,7 @@ def check_stock(respond_dict):
     return answer_function
 
 def check_price():
-    fur = sheet1.cell(2, 3).value
+    fur = sheet1.cell(2, 3).value.upper()
     cell=sheet2.col_values(4)
     num = 1
     for i in cell:
@@ -164,12 +174,13 @@ def check_price():
 
 
 def check_img():
-    fur = sheet1.cell(2, 3).value
-    cell=sheet2.col_values(3)
+    fur = sheet1.cell(2, 3).value.upper()
+    cell= sheet2.col_values(4)
     num = 1
     for i in cell:
-        if str(i) == str(fur):
-            Item_name = sheet2.cell(num, 15).value
+        dict_name = i.split()
+        if str(fur) in dict_name:
+            Item_name = sheet2.cell(num, 6).value
             answer_function = [{"platform": "LINE","image": {"imageUri": Item_name}}]
             break
         elif i == None:
@@ -181,13 +192,102 @@ def check_img():
     return answer_function
 
 def test_img(respond_dict): 
-    img = [{"platform": "LINE","image": {"imageUri": "https://www.ikea-club.org/images/productcatalog/gallery/S69276421/1.jpg"}}]
+    img = {"line": {"type": "text","text": "สวัสดี นี่คือคำทักทายจาก Dialogflow (Custom payload)"}}
     # answer_function = json.dumps(img, indent=4)
     
     return img
+
+def recommend_item(respond_dict):
+    answer_function = ""
+    cell=order_sheet.col_values(2)
+    cell2=order_sheet.col_values(20)
+    temp = []
+    temp2 = []
+    id_list = []
+    name_list = []
+    post_list = []
+    pre_list = []
+    count = 0
+    for i in cell:
+        if count == 0:
+            temp.append(cell[count])
+            temp2.append(cell2[count])
+            count += 1
+        elif len(cell) == count+1:
+            if cell[count] == cell[count-1]:
+                temp.append(cell[count])
+                temp2.append(cell2[count])
+                id_list.append(temp)
+                name_list.append(temp2)
+                count += 1
+            else:
+                id_list.append(temp)
+                name_list.append(temp2)
+                temp = []
+                temp2 = []
+                temp.append(cell[count])
+                temp2.append(cell2[count])
+                count += 1
+        else:
+            if cell[count] == cell[count-1]:
+                temp.append(cell[count])
+                temp2.append(cell2[count])
+                count += 1
+            else:
+                if len(temp) != 1:
+                    id_list.append(temp)
+                    name_list.append(temp2)
+                temp = []
+                temp2 = []
+                temp.append(cell[count])
+                temp2.append(cell2[count])
+                count += 1
+    
+    a = TransactionEncoder()
+    a_data = a.fit(name_list).transform(name_list)
+    df = pd.DataFrame(a_data,columns=a.columns_)
+    df = df.replace(False,0)
+    df = apriori(df, min_support = 0.2, use_colnames = True, verbose = 1)
+    df_ar = association_rules(df, metric = "confidence", min_threshold = 0.6)
+    data = list(df_ar["consequents"])
+    for i in data:
+        promo_list = list(i)
+        post_list.append(promo_list[0])
+    pre = list(df_ar["antecedents"])
+    for i in pre:
+        promo_list = list(i)
+        pre_list.append(promo_list[0])
+    print(pre_list)
+    print(post_list)
+    check_id = sheet1.col_values(1)
+    search_his = sheet1.col_values(3)
+    count = 0
+    item_his = ""
+    userid = respond_dict["originalDetectIntentRequest"]["payload"]["data"]["source"]["userId"]
+    for i in check_id:
+        if i == userid:
+            item_his = search_his[count]
+            break
+        elif i == None:
+            pass
+        else:
+            pass
+        count += 1
+    print(item_his)
+    count2 = 0
+    for i in pre_list:
+        if i == item_his:
+            answer_function = post_list[count2]
+            answer_function = "คุณอาจสนใจสินค้าชื่อ " + answer_function 
+        else:
+            answer_function = "ไม่มีข้อมูล"
+        count2 += 1
+
+    return answer_function
 
 #Flask
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 5000))
     print("Starting app on port %d" % port)
     app.run(debug=False, port=port, host='0.0.0.0', threaded=True)
+# {"type": "bubble","direction": "ltr","header": {"type": "box","layout": "vertical","contents": [  {   "type": "text",    "text": "Header",    "align": "center",    "contents": []  }]},"hero": {"type": "image","url": "https://vos.line-scdn.net/bot-designer-template-images/bot-designer-icon.png","size": "full","aspectRatio": "1.51:1","aspectMode": "fit" },"body": {"type": "box","layout": "vertical","contents": [{"type": "text","text": "Body","align": "center","contents": []}]},"footer": {"type": "box","layout": "horizontal","contents": [{"type": "button","action": {"type": "uri","label": "Button","uri": "https://linecorp.com"}}]}}
