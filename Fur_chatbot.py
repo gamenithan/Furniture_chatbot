@@ -2,7 +2,7 @@
 #Import Library
 import json
 import os
-from re import I
+from re import A, I
 from flask import Flask
 from flask import request
 from flask import make_response
@@ -30,6 +30,7 @@ cerds = ServiceAccountCredentials.from_json_keyfile_name("cerds.json", scope)
 client = gspread.authorize(cerds)
 sheet1 = client.open("Chatbot-Fur").worksheet('sheet1')
 sheet2 = client.open("Chatbot-Fur").worksheet('Inventory')
+sheet3 = client.open("Chatbot-Fur").worksheet('DisplayName')
 order_sheet = client.open("Chatbot-Fur").worksheet('order') # เป็นการเปิดไปยังหน้าชีตนั้นๆ
 # pprint(data)
 #-------------------------------------
@@ -79,6 +80,10 @@ def generating_answer(question_from_dailogflow_dict):
         answer_str = question_Furniture_data(question_from_dailogflow_dict)
     elif intent_group_question_str == 'คำนวนสินค้าในสต็อก': 
         answer_str = check_stock(question_from_dailogflow_dict)
+    elif intent_group_question_str == 'ถามประเภท': 
+        answer_str = type_item(question_from_dailogflow_dict)
+    elif intent_group_question_str == 'ดูโปรโมชั่น': 
+        answer_str = promotion(question_from_dailogflow_dict)
     elif intent_group_question_str == 'ราคาสินค้า':
         answer_str = check_price()
     elif intent_group_question_str == 'แนะนำสินค้า':
@@ -117,6 +122,10 @@ def question_Furniture_data(respond_dict):
     # menu_name = database_list[ran_menu]
     cell=sheet2.col_values(4)
     num = 1
+    line_bot_api = LineBotApi('hV/ADGn/G8L1r6E2BGTH3ShT+UH2YxZY2JA7TsdDeqxizdeMuJ1ghDkpYmBy0rYGmi+2RnREJuimUpC1DCTSYcuDp+Hf1kborFKHRMYkGpqdxCJGzb2e85TF0hv6+4zHrA5XUDQcKNikdcoV1LEgGwdB04t89/1O/w1cDnyilFU=')
+    profile = line_bot_api.get_profile(userid)
+    profile = json.loads(str(profile))
+    dis_name = profile["displayName"]
     # sheet.insert_row([fur], 2)
     for i in cell:
         dict_name = i.split()
@@ -126,9 +135,10 @@ def question_Furniture_data(respond_dict):
             Item_price = sheet2.cell(num, 9).value
             Item_des = sheet2.cell(num, 8).value
             Item_stock = sheet2.cell(num, 12).value
+            item_link = sheet2.cell(num, 16).value
             answer_function = "สินค้าชื่อ: " + Item_name + "\n" + "รายละเอียดสินค้า: " + Item_type + Item_des + "\n" + "ราคาสินค้า: " + Item_price + " บาท\n" +  "สินค้าคงเหลือ: " + Item_stock + \
-                " ชิ้น"
-            sheet1.insert_row([userid, timestamp2.strftime("%Y-%m-%d %H:%M:%S"), fur], 2)
+                " ชิ้น "   + "\nหากสนใช่สั่งซื้อได้ที่ " + item_link
+            sheet1.insert_row([userid, timestamp2.strftime("%Y-%m-%d %H:%M:%S"), fur, dis_name], 2)
             break
         elif i == None:
             answer_function = "ไม่มีข้อมูล"
@@ -283,6 +293,48 @@ def recommend_item(respond_dict):
             answer_function = "ไม่มีข้อมูล"
         count2 += 1
 
+    return answer_function
+
+def type_item(respond_dict):
+    print(respond_dict)
+    type_data = respond_dict["queryResult"]["outputContexts"][0]["parameters"]["type.original"]
+    cell=sheet2.col_values(5)
+    num = 1
+    for i in cell:
+        if type_data in i:
+            item_link = sheet2.cell(num, 16).value
+            answer_function = item_link
+            break
+        elif i == None:
+            answer_function = "ไม่มีข้อมูล"
+        else:
+            num += 1
+            answer_function = "ไม่มีข้อมูล"
+    return answer_function
+
+def promotion(respond_dict):
+    userid = respond_dict["originalDetectIntentRequest"]["payload"]["data"]["source"]["userId"]
+    line_bot_api = LineBotApi('hV/ADGn/G8L1r6E2BGTH3ShT+UH2YxZY2JA7TsdDeqxizdeMuJ1ghDkpYmBy0rYGmi+2RnREJuimUpC1DCTSYcuDp+Hf1kborFKHRMYkGpqdxCJGzb2e85TF0hv6+4zHrA5XUDQcKNikdcoV1LEgGwdB04t89/1O/w1cDnyilFU=')
+    profile = line_bot_api.get_profile(userid)
+    profile = json.loads(str(profile))
+    dis_name = profile["displayName"]
+    cell = order_sheet.col_values(7)
+    item = order_sheet.col_values(20)
+    order_list = []
+    num = 0
+    for i in cell:
+        if dis_name == i:
+            order_list.append(item[num])
+        num += 1
+    check = 0
+    for i in order_list:
+        if "LINNMON" == i:
+            answer_function = "มีโปรโมชั่น LINNMON"
+            check = 1
+            break
+        else:
+            answer_function = "ยังไม่มีโปรโมชั่น"
+        
     return answer_function
 
 #Flask
