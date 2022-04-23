@@ -31,6 +31,7 @@ client = gspread.authorize(cerds)
 sheet1 = client.open("Chatbot-Fur").worksheet('sheet1')
 sheet2 = client.open("Chatbot-Fur").worksheet('Inventory')
 sheet3 = client.open("Chatbot-Fur").worksheet('DisplayName')
+asso = client.open("Association").worksheet('Association')
 order_sheet = client.open("Chatbot-Fur").worksheet('order') # เป็นการเปิดไปยังหน้าชีตนั้นๆ
 # pprint(data)
 #-------------------------------------
@@ -115,11 +116,6 @@ def question_Furniture_data(respond_dict):
     timestamp = respond_dict["originalDetectIntentRequest"]["payload"]["data"]["timestamp"]
     print(int(timestamp))
     timestamp2 = datetime.fromtimestamp(int(timestamp)/1000)
-    # database_ref = firestore.client().document('Furniture/Item_list')
-    # database_dict = database_ref.get().to_dict()
-    # database_list = list(database_dict.values())
-    # ran_menu = randint(0, len(database_list)-1)
-    # menu_name = database_list[ran_menu]
     cell=sheet2.col_values(4)
     num = 1
     line_bot_api = LineBotApi('hV/ADGn/G8L1r6E2BGTH3ShT+UH2YxZY2JA7TsdDeqxizdeMuJ1ghDkpYmBy0rYGmi+2RnREJuimUpC1DCTSYcuDp+Hf1kborFKHRMYkGpqdxCJGzb2e85TF0hv6+4zHrA5XUDQcKNikdcoV1LEgGwdB04t89/1O/w1cDnyilFU=')
@@ -137,7 +133,7 @@ def question_Furniture_data(respond_dict):
             Item_stock = sheet2.cell(num, 12).value
             item_link = sheet2.cell(num, 16).value
             answer_function = "สินค้าชื่อ: " + Item_name + "\n" + "รายละเอียดสินค้า: " + Item_type + Item_des + "\n" + "ราคาสินค้า: " + Item_price + " บาท\n" +  "สินค้าคงเหลือ: " + Item_stock + \
-                " ชิ้น "   + "\nหากสนใช่สั่งซื้อได้ที่ " + item_link
+                " ชิ้น "   + "\nหากสนใจสั่งซื้อได้ที่ " + item_link
             sheet1.insert_row([userid, timestamp2.strftime("%Y-%m-%d %H:%M:%S"), fur, dis_name], 2)
             break
         elif i == None:
@@ -320,20 +316,37 @@ def promotion(respond_dict):
     dis_name = profile["displayName"]
     cell = order_sheet.col_values(7)
     item = order_sheet.col_values(20)
+    item_name = sheet2.col_values(2)
+    pre = asso.col_values(2)
+    post = asso.col_values(3)
     order_list = []
     num = 0
+    num2 = 0
+    num3 = 1
+    
     for i in cell:
         if dis_name == i:
             order_list.append(item[num])
         num += 1
     check = 0
-    for i in order_list:
-        if "LINNMON" == i:
-            answer_function = "มีโปรโมชั่น LINNMON"
-            check = 1
+    for i in pre:
+        i = i.replace("frozenset({'", '')
+        i = i.replace("'})", '')
+        for j in order_list:
+            if j == i:
+                answer_function = post[num2].replace("frozenset({'", '')
+                answer_function = answer_function.replace("'})", '')
+                break
+            else:
+                answer_function = "ยังไม่มีโปรโมชั่นแนะนำสำหรับคุณ"
+        num2 += 1
+    for i in item_name:
+        if i == answer_function:
+            item_link = sheet2.cell(num3, 16).value
+            name = sheet2.cell(num3, 4).value
             break
-        else:
-            answer_function = "ยังไม่มีโปรโมชั่น"
+        num3 += 1
+    answer_function = "ตอนนี้ " + name + " มีโปรโมชั่นอยู่ \nสามารถดูรายละเอียดได้ที่ \n" + item_link
         
     return answer_function
 

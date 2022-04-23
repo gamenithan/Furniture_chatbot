@@ -13,6 +13,8 @@ cerds = ServiceAccountCredentials.from_json_keyfile_name("cerds.json", scope)
 client = gspread.authorize(cerds)
 sheet1 = client.open("Chatbot-Fur").worksheet('sheet1')
 order_sheet = client.open("Chatbot-Fur").worksheet('order') # เป็นการเปิดไปยังหน้าชีตนั้นๆ
+spread_sheet = client.open("Association")
+spread_sheet2 = client.open("Association").worksheet('Association')
 def main():
     """dsfsdf"""
     cell=order_sheet.col_values(2)
@@ -72,10 +74,24 @@ def main():
     print(len(name_list))
     data = list(df_ar["consequents"])
     print(df_ar)
-    for i in data:
-        promo_list = list(i)
-        answer.append(promo_list[0])
+    print(type(df_ar))
+    try:
+        ex_csv = df_ar.to_csv('association_rules.csv') # relative position
+        ex_csv.to_csv('C:/Users/Game_nithan/Desktop/Line-Chatbot.csv')
+    except AttributeError as e:
+        print(e)
+    content = open('association_rules.csv', 'r').read()
+    # print(spread_sheet.id)
+    client.import_csv(spread_sheet.id, content)
+    text = spread_sheet2.col_values(2)
+    for i in text:
+        i = i.replace("frozenset({'", '')
+        i = i.replace("'})", '')
+        print(i)
+    # for i in data:
+    #     promo_list = list(i)
+    #     answer.append(promo_list[0])
     # print([list(x) for x in data])
-    print(answer)
+    # print(answer)
     
 main()
