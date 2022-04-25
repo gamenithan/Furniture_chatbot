@@ -32,6 +32,7 @@ sheet1 = client.open("Chatbot-Fur").worksheet('sheet1')
 sheet2 = client.open("Chatbot-Fur").worksheet('Inventory')
 sheet3 = client.open("Chatbot-Fur").worksheet('DisplayName')
 asso = client.open("Association").worksheet('Association')
+promotion_list = client.open("Chatbot-Fur").worksheet('Promotion')
 order_sheet = client.open("Chatbot-Fur").worksheet('order') # เป็นการเปิดไปยังหน้าชีตนั้นๆ
 # pprint(data)
 #-------------------------------------
@@ -81,9 +82,7 @@ def generating_answer(question_from_dailogflow_dict):
         answer_str = question_Furniture_data(question_from_dailogflow_dict)
     elif intent_group_question_str == 'คำนวนสินค้าในสต็อก': 
         answer_str = check_stock(question_from_dailogflow_dict)
-    elif intent_group_question_str == 'ถามประเภท': 
-        answer_str = type_item(question_from_dailogflow_dict)
-    elif intent_group_question_str == 'ดูโปรโมชั่น': 
+    elif intent_group_question_str == 'โปรโมชั่นแนะนำ': 
         answer_str = promotion(question_from_dailogflow_dict)
     elif intent_group_question_str == 'ราคาสินค้า':
         answer_str = check_price()
@@ -205,8 +204,9 @@ def test_img(respond_dict):
 
 def recommend_item(respond_dict):
     answer_function = ""
-    cell=order_sheet.col_values(2)
+    cell1=order_sheet.col_values(2)
     cell2=order_sheet.col_values(20)
+    inven = sheet2.col_values(2)
     temp = []
     temp2 = []
     id_list = []
@@ -214,14 +214,14 @@ def recommend_item(respond_dict):
     post_list = []
     pre_list = []
     count = 0
-    for i in cell:
+    for i in cell1:
         if count == 0:
-            temp.append(cell[count])
+            temp.append(cell1[count])
             temp2.append(cell2[count])
             count += 1
-        elif len(cell) == count+1:
-            if cell[count] == cell[count-1]:
-                temp.append(cell[count])
+        elif len(cell1) == count+1:
+            if cell1[count] == cell1[count-1]:
+                temp.append(cell1[count])
                 temp2.append(cell2[count])
                 id_list.append(temp)
                 name_list.append(temp2)
@@ -231,12 +231,12 @@ def recommend_item(respond_dict):
                 name_list.append(temp2)
                 temp = []
                 temp2 = []
-                temp.append(cell[count])
+                temp.append(cell1[count])
                 temp2.append(cell2[count])
                 count += 1
         else:
-            if cell[count] == cell[count-1]:
-                temp.append(cell[count])
+            if cell1[count] == cell1[count-1]:
+                temp.append(cell1[count])
                 temp2.append(cell2[count])
                 count += 1
             else:
@@ -245,7 +245,7 @@ def recommend_item(respond_dict):
                     name_list.append(temp2)
                 temp = []
                 temp2 = []
-                temp.append(cell[count])
+                temp.append(cell1[count])
                 temp2.append(cell2[count])
                 count += 1
     
@@ -283,30 +283,40 @@ def recommend_item(respond_dict):
     count2 = 0
     for i in pre_list:
         if i == item_his:
-            answer_function = post_list[count2]
-            answer_function = "คุณอาจสนใจสินค้าชื่อ " + answer_function 
-        else:
-            answer_function = "ไม่มีข้อมูล"
-        count2 += 1
-
-    return answer_function
-
-def type_item(respond_dict):
-    print(respond_dict)
-    type_data = respond_dict["queryResult"]["outputContexts"][0]["parameters"]["type.original"]
-    cell=sheet2.col_values(5)
-    num = 1
-    for i in cell:
-        if type_data in i:
-            item_link = sheet2.cell(num, 16).value
-            answer_function = item_link
+            answer = post_list[count2]
             break
-        elif i == None:
-            answer_function = "ไม่มีข้อมูล"
         else:
-            num += 1
+            answer = "ไม่มีข้อมูล"
+        count2 += 1
+    num = 1
+
+    for i in inven:
+        if i == answer:
+            name = sheet2.cell(num, 4).value
+            item_link = sheet2.cell(num, 16).value
+            break
+        else:
             answer_function = "ไม่มีข้อมูล"
+        num += 1
+    answer_function = "คุณอาจสนใจ " + name + " \nสามารถดูรายละเอียดได้ที่\n" + item_link
     return answer_function
+
+# def type_item(respond_dict):
+#     print(respond_dict)
+#     type_data = respond_dict["queryResult"]["outputContexts"][0]["parameters"]["type.original"]
+#     cell=sheet2.col_values(5)
+#     num = 1
+#     for i in cell:
+#         if type_data in i:
+#             item_link = sheet2.cell(num, 16).value
+#             answer_function = item_link
+#             break
+#         elif i == None:
+#             answer_function = "ไม่มีข้อมูล"
+#         else:
+#             num += 1
+#             answer_function = "ไม่มีข้อมูล"
+#     return answer_function
 
 def promotion(respond_dict):
     userid = respond_dict["originalDetectIntentRequest"]["payload"]["data"]["source"]["userId"]
@@ -316,7 +326,7 @@ def promotion(respond_dict):
     dis_name = profile["displayName"]
     cell = order_sheet.col_values(7)
     item = order_sheet.col_values(20)
-    item_name = sheet2.col_values(2)
+    promotion = promotion_list.col_values(2)
     pre = asso.col_values(2)
     post = asso.col_values(3)
     order_list = []
@@ -336,17 +346,20 @@ def promotion(respond_dict):
             if j == i:
                 answer_function = post[num2].replace("frozenset({'", '')
                 answer_function = answer_function.replace("'})", '')
+                pre_name = pre[num2].replace("frozenset({'", '')
+                pre_name = pre_name.replace("'})", '')
                 break
             else:
+                pre_name = ""
                 answer_function = "ยังไม่มีโปรโมชั่นแนะนำสำหรับคุณ"
         num2 += 1
-    for i in item_name:
+    for i in promotion:
         if i == answer_function:
-            item_link = sheet2.cell(num3, 16).value
-            name = sheet2.cell(num3, 4).value
+            item_link = promotion_list.cell(num3, 16).value
+            name = promotion_list.cell(num3, 4).value
             break
         num3 += 1
-    answer_function = "ตอนนี้ " + name + " มีโปรโมชั่นอยู่ \nสามารถดูรายละเอียดได้ที่ \n" + item_link
+    answer_function = "เนือกจากคุณเคยสั่ง " + pre_name + "\nเราเลยแนะนำสินค้าที่คุณอาจสนใจชื่อ \n" + name + " เนื่องจากมีโปรโมชั่นอยู่ \nสามารถดูรายละเอียดได้ที่ \n" + item_link
         
     return answer_function
 
