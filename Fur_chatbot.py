@@ -136,10 +136,10 @@ def question_Furniture_data(respond_dict):
             sheet1.insert_row([userid, timestamp2.strftime("%Y-%m-%d %H:%M:%S"), fur, dis_name], 2)
             break
         elif i == None:
-            answer_function = "ไม่มีข้อมูล"
+            answer_function = "ไม่มีข้อมูลหรือคุณอาจเขียนชื่อสินค้าไม่ถูกต้อง"
         else:
             num += 1
-            answer_function = "ไม่มีข้อมูล"
+            answer_function = "ไม่มีข้อมูลหรือคุณอาจเขียนชื่อสินค้าไม่ถูกต้อง"
     return answer_function
 
 def check_stock(respond_dict): 
@@ -149,7 +149,7 @@ def check_stock(respond_dict):
     for i in cell:
         dict_name = i.split()
         if str(fur) in dict_name:
-            Item_name = sheet2.cell(num, 11).value
+            Item_name = sheet2.cell(num, 12).value
             answer_function = "จำนวนสินค้ามีทั้งหมด" + ' ' + Item_name + ' ' + "ชิ้น"
             break
         elif i == None:
@@ -166,7 +166,7 @@ def check_price():
     for i in cell:
         dict_name = i.split()
         if str(fur) in dict_name:
-            Item_name = sheet2.cell(num, 8).value
+            Item_name = sheet2.cell(num, 9).value
             answer_function = "ราคา"+ ' ' + Item_name + ' ' + "บาท"
             break
         elif i == None:
@@ -214,6 +214,7 @@ def recommend_item(respond_dict):
     post_list = []
     pre_list = []
     count = 0
+    name = " "
     for i in cell1:
         if count == 0:
             temp.append(cell1[count])
@@ -268,12 +269,11 @@ def recommend_item(respond_dict):
     check_id = sheet1.col_values(1)
     search_his = sheet1.col_values(3)
     count = 0
-    item_his = ""
+    item_his = []
     userid = respond_dict["originalDetectIntentRequest"]["payload"]["data"]["source"]["userId"]
     for i in check_id:
         if i == userid:
-            item_his = search_his[count]
-            break
+            item_his.append(search_his[count])
         elif i == None:
             pass
         else:
@@ -281,12 +281,20 @@ def recommend_item(respond_dict):
         count += 1
     print(item_his)
     count2 = 0
+    count3 = 0
+    answer = "ไม่มีข้อมูล"
     for i in pre_list:
-        if i == item_his:
-            answer = post_list[count2]
+        for j in item_his:
+            if i == j:
+                count3 += 1
+                answer = post_list[count2]
+                print(answer)
+                print(count3)
+                break
+            else:
+                answer = "ไม่มีข้อมูล"
+        if answer != "ไม่มีข้อมูล":
             break
-        else:
-            answer = "ไม่มีข้อมูล"
         count2 += 1
     num = 1
 
@@ -298,7 +306,12 @@ def recommend_item(respond_dict):
         else:
             answer_function = "ไม่มีข้อมูล"
         num += 1
-    answer_function = "คุณอาจสนใจ " + name + " \nสามารถดูรายละเอียดได้ที่\n" + item_link
+    
+    if name != " ":
+        answer_function = "คุณอาจสนใจ " + name + " \nสามารถดูรายละเอียดได้ที่\n" + item_link
+    else:
+        answer_function = "สินค้าขายดีแนะนำ\n" + "https://shop.line.me/@224zwhrr/collection/73765"
+        
     return answer_function
 
 # def type_item(respond_dict):
@@ -333,6 +346,7 @@ def promotion(respond_dict):
     num = 0
     num2 = 0
     num3 = 1
+    name = " "
     
     for i in cell:
         if dis_name == i:
@@ -359,8 +373,10 @@ def promotion(respond_dict):
             name = promotion_list.cell(num3, 4).value
             break
         num3 += 1
-    answer_function = "เนือกจากคุณเคยสั่ง " + pre_name + "\nเราเลยแนะนำสินค้าที่คุณอาจสนใจชื่อ \n" + name + " เนื่องจากมีโปรโมชั่นอยู่ \nสามารถดูรายละเอียดได้ที่ \n" + item_link
-        
+    if name != " ":
+        answer_function = "เนือกจากคุณเคยสั่ง " + pre_name + "\nเราเลยแนะนำสินค้าที่คุณอาจสนใจชื่อ \n" + name + " เนื่องจากมีโปรโมชั่นอยู่ \nสามารถดูรายละเอียดได้ที่ \n" + item_link
+    else:
+        answer_function = "โปรโมชั่นทั้งหมด\n" + "https://shop.line.me/@224zwhrr/collection/73765"
     return answer_function
 
 #Flask
