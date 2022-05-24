@@ -273,7 +273,12 @@ def recommend_item(respond_dict):
     userid = respond_dict["originalDetectIntentRequest"]["payload"]["data"]["source"]["userId"]
     for i in check_id:
         if i == userid:
-            item_his.append(search_his[count])
+            # print(count)
+            # print(search_his[count])
+            if search_his[count] in pre_list:
+                # print('test')
+                item_his.append(search_his[count])
+            pass
         elif i == None:
             pass
         else:
@@ -283,17 +288,20 @@ def recommend_item(respond_dict):
     count2 = 0
     count3 = 0
     answer = "ไม่มีข้อมูล"
+    counter = 0
+    for i in item_his:
+        temp = item_his.count(i)
+        if temp > counter:
+            counter = temp
+            answer = i
+    print(answer)
     for i in pre_list:
-        for j in item_his:
-            if i == j:
-                count3 += 1
-                answer = post_list[count2]
-                print(answer)
-                print(count3)
-                break
-            else:
-                answer = "ไม่มีข้อมูล"
-        if answer != "ไม่มีข้อมูล":
+        print(i + str(count2))
+        print(answer + str(count2))
+        if i == answer:
+            count3 += 1
+            answer = post_list[count2]
+            print(answer)
             break
         count2 += 1
     num = 1
@@ -347,12 +355,13 @@ def promotion(respond_dict):
     num2 = 0
     num3 = 1
     name = " "
-    
+    answer_function = ""
     for i in cell:
         if dis_name == i:
             order_list.append(item[num])
         num += 1
     check = 0
+    order_list = list(dict.fromkeys(order_list))
     for i in pre:
         i = i.replace("frozenset({'", '')
         i = i.replace("'})", '')
@@ -360,6 +369,9 @@ def promotion(respond_dict):
             if j == i:
                 answer_function = post[num2].replace("frozenset({'", '')
                 answer_function = answer_function.replace("'})", '')
+                if answer_function in order_list:
+                    answer_function = "ยังไม่มีโปรโมชั่นแนะนำสำหรับคุณ"
+                    continue
                 pre_name = pre[num2].replace("frozenset({'", '')
                 pre_name = pre_name.replace("'})", '')
                 break
